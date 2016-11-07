@@ -1,0 +1,67 @@
+1.Export data from HDFS into MYSQL
+
+
+#Truncate Table
+
+mysql> truncate departments_test;
+
+
+#Export command - export data from HDFS file to MYSQL
+
+sqoop export \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \ 
+--password cloudera \
+--table departments_test \
+--export-dir /user/hive/warehouse/departments_test \
+--input-fields-terminated-by '\001' \
+--input-lines-terminated-by '\n' \
+--num-mappers 2 \
+--batch \
+--outdir java_files \
+--input-null-string nvl \
+--input-null-non-string -1
+
+
+# Export Merge
+
+
+sqoop export \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \ 
+--password cloudera \
+--table departments \
+--export-dir /user/cloudera/sqoop_import/departments_export \
+--num-mappers 2 \
+--batch \
+--outdir java_files \
+--update-key department_id \
+--update-mode allowinsert 
+
+# here update-mode is allowinsert or updateonly
+
+sqoop export \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \ 
+--password cloudera \
+--table departments \
+--export-dir /user/cloudera/sqoop_import/departments_export \
+--num-mappers 2 \
+--batch \
+--outdir java_files \
+--update-key department_id \
+
+
+Here update-mode is not given, then default it will do update only even though if you give new row for insert in the file
+
+If the primary key is dropped from the table, then using upadate-key command parameter in the query will create a duplicate in the table.
+
+### staging
+
+--staging-table ---> use to import data from HDFS before inserting into target table in order to check whether all the data has loaded successfully
+--clear-staging-table ---> To clear all the data inside the table
+
+Note:  Update-key cannot run with staging-table
+
+
+
