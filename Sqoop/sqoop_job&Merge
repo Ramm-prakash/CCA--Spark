@@ -1,0 +1,36 @@
+# To create a sqoop job 
+
+Here -- import --> A space should be there for import between -- and import
+
+sqoop job --create sqoop_job /
+-- import /
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" /
+--username retail_dba /
+--password cloudera /
+--table departments_incremental /
+--target-dir /user/cloudera/sqoop_import/departments /
+--check-column "last_updated_time" /
+--incremental lastmodified --last-value '2016-03-27 23:59:35.0' --outdir java_files -m 1 --merge-key department_id;
+
+
+# To list the job
+
+$ sqoop job --list
+
+# TO show the details
+
+$ sqoop job --show sqoop_job
+
+# To run the job
+
+$ sqoop job --exec sqoop_job
+
+#merge
+
+sqoop merge --merge
+
+sqoop merge --merge-key department_id --new-data /user/cloudera/sqoop_import/departments_data1 --onto /user/cloudera/sqoop_import/departments_data --target-dir /user/cloudera/sqoop_import/departments_merge --class-name departments --jar-file /tmp/sqoop-cloudera/compile/71fba74b6c485389e8e8b2a2b4f7e20a/departments.jar
+
+
+Incremental import can be saved as job. SO that for sebsequent incremental import, it will just save the last value. So that next time, it will import the value
+from the last value stored. 
