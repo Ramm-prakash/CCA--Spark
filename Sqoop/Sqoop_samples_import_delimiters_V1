@@ -1,0 +1,93 @@
+1. Hadoop Ceritfication - 01 Sqoop import delimiters_HD
+
+#enclosed-by
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table departments \
+--target-dir /user/cloudera/sqoop_import/departments_enclosedby \
+--outdir java_files \
+--direct \
+--num-mappers 4 \
+--enclosed-by \"
+
+# Fields and lines terminated by
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table departments \
+--target-dir /user/cloudera/sqoop_import/departments_enclosedby \
+--outdir java_files \
+--direct \
+--num-mappers 4 \
+--enclosed-by \" \
+--fields-terminated-by \| \
+--lines-terminated-by \:
+
+# Import demiliter file in HIVE
+
+# To create hive table
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table departments \
+--hive-home /user/hive/warehouse \
+--hive-import \
+--hive-table departments_test \
+--create-hive-table \
+--outdir java_files \
+--direct \
+--num-mappers 4 \
+
+Now drop the above table in hive.
+
+# Then create a new table departments_test in hive itself
+
+hive > create departments_test (department_id int, department_name string)
+
+# Now again run scoop import but hive as target-dir
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table departments \
+--target-dir /user/hive/warehouse/departments_test \
+--outdir java_files \
+--direct \
+--num-mappers 4
+--append
+
+Since hive command is not used above, all the datas
+are showing null as follows
+
+
+hive> select * from departments_test;
+OK
+NULL    NULL
+NULL    NULL
+NULL    NULL
+NULL    NULL
+NULL    NULL
+NULL    NULL
+NULL    NULL
+
+# While using sqoop import with hive, hive will default set fields and lines delimiter.
+If normal sqoop import with hive target-dir, then the data will show as NULL
+
+
+# IF any of the row in mysql table has null value, we can insert those rows also into
+hive table using 
+
+--null-string "null string"
+--null-non-string 0
+
+So that it will replace NULL in the string field to "null string" in the hive table
+
+and null in the non-string field to 0 in the hive table
+
+
+
+
