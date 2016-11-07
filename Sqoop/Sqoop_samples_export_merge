@@ -1,0 +1,85 @@
+1.Hadoop Certification - 02 Sqoop Export - Merge-Upsert_HD
+
+
+# To export updated/new data to MYSQL
+
+1. Create file and add some records.
+
+$ vi departments_test;
+
+[cloudera@quickstart ~]$ cat departments_test;
+7,fanshop
+9000,testing
+
+# I renamed the file
+
+[cloudera@quickstart ~]$ mv departments_test departments_export;
+
+
+# Create a directory in HDFS
+
+[cloudera@quickstart ~]$ hadoop fs -mkdir /user/cloudera/sqoop_import/departments_export
+
+# Now put the file departments_export to that dir
+
+hadoop fs -put /home/cloudera/departments_export /user/cloudera/sqoop_import/departments_export
+
+
+NOw use sqoop export 
+
+sqoop export --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table departments_export \
+--export-dir /user/cloudera/sqoop_import/departments_export \
+--outdir java_files \
+--direct \
+--num-mappers 4 \
+--update-key department_id \
+--update-mode allowinsert \
+
+# Here update-key should be unique or primary key &
+update-mode as allowinsert or updateonly
+
+Allow insert -- It will allow insert other than update
+updateonly - It will allow update alone. By default, it is updateonly mode.
+
+# The table has updated as follows
+
+mysql> select * from departments_export;
++---------------+-----------------+
+| department_id | department_name |
++---------------+-----------------+
+|             2 | Fitness         |
+|             3 | Footwear        |
+|             4 | Apparel         |
+|             5 | Golf            |
+|             6 | Outdoors        |
+|             7 | Fan Shop        |
+|          8000 | Test            |
+|             7 | fanshop         |
+|          9000 | testing         |
++---------------+-----------------+
+9 rows in set (0.00 sec)
+
+Since the primay key is not present in the table,
+
+it will newly insert the records(Duplicate records
+are created).
+
+To solve this issue, we need to use table with primary key
+
+
+### staging
+
+--staging-table ---> use to import data from HDFS before inserting into target table in order to check whether all the data has loaded successfully
+--clear-staging-table ---> To clear all the data inside the table
+ Staging is normally used when primary key of the table is not available. So while doing export, it will fail after try to export until 4 times. 
+
+So the insert will fail. In such case, staging will be using
+
+Note:  Update-key cannot run with staging-table
+
+
+
+
