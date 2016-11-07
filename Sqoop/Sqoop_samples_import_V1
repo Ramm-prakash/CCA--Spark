@@ -1,0 +1,565 @@
+sqoop ---> Sqoop version: 1.4.6-cdh5.5.0
+
+site:sqoop user guide v1.4.2
+
+
+1. Hadoop Certification - 01 Sqoop Import_HD
+
+# To list databases
+
+sqoop list-databases \
+--connect "jdbc:mysql://quickstart.cloudera:3306" \
+--username retail_dba \
+--password cloudera
+
+# To list tables
+
+sqoop list-tables \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera
+
+# Help
+
+sqoop import --help
+
+# To create directory in hadoop
+
+hadoop fs -mkdir /user/cloudera/sqoop_import
+
+# TO import all tables
+
+sqoop import-all-tables \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--warehouse-dir /user/cloudera/sqoop_import1
+-m 2
+
+# to import a table
+
+sqoop import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--table departments \
+--username retail_dba \
+--password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments \
+-m 2 \
+--fields-terminated-by \, \
+--lines-terminated-by \n \
+
+
+
+# By default, the number of mappers are 4
+
+# to dispaly record
+
+hadoop fs -tail /user/cloudera/sqoop_import/departments/part-m-00000
+
+or 
+
+hadoop fs -cat /user/cloudera/sqoop_import/departments/part-m-*
+
+# To find word count
+
+hadoop fs -cat /user/cloudera/sqoop_import/departments/part-m-* | wc -l
+
+# To eval the command
+
+
+2. Hadoop Certification - 02 Sqoop Import_HD
+
+# Hive default database ---> /user/hive/warehouse
+
+# In hive, every statement ends with ";"
+
+hive
+
+# to enter into hive
+
+create database sqoop_import1;
+
+#in hive, the command is 
+
+dfs -ls /user/hive/warehouse;
+
+# to drop table
+
+drop table table-name
+
+# To import all tables from MYSQL to hive default db(Create Hive tables):
+
+sqoop import-all-tables \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--hive-import \
+--hive-overwrite \
+--create-hive-table \
+--compress \
+--compression-codec org.apache.hadoop.io.compress.SnappyCodec \
+--outdir java_files
+
+# TO import table into hive
+
+sqoop import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table orders \
+--hive-import \
+--hive-overwrite \
+--create-hive-table \
+--delete-target-dir \
+--outdir java_files
+
+# To describe the table
+
+describe formatted categories;
+
+# To show difference of bytes used btw compress and non-compress
+
+hive> dfs -du -s -h /user/hive/warehouse/order_items;
+1.8 M  1.8 M  /user/hive/warehouse/order_items
+
+hive> dfs -du -s -h /user/cloudera/sqoop_import1/order_items;
+5.2 M  5.2 M  /user/cloudera/sqoop_import1/order_items
+
+
+hive> dfs -tail /user/cloudera/sqoop_import1/departments/part-m-00000;
+2,Fitness
+3,Footwear
+
+hive> dfs -tail /user/hive/warehouse/departments/part-m-00001.snappy;
+
+$4Apparel
+
+3. Hadoop Certification - 02 Sqoop Import - Add on_HD
+
+# To import all tables from HDFS to hive particular db in hive(Create Hive tables):
+
+sqoop import-all-tables \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--hive-import \
+--hive-overwrite \
+--create-hive-table \
+--compress \
+--compression-codec org.apache.hadoop.io.compress.SnappyCodec \
+--outdir java_files \
+--num-mappers 1 \
+--hive-database sqoop_import1
+
+
+
+
+4. Hadoop Certification - 03 Sqoop Import
+
+[~ ram] $ sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --target-dir /user/cloudera/departments --table departments --num-mappers 2 --outdir java_files
+
+
+# Boundary Query --> Inorder to fetch the record within some boundary. For instance, for billions of records, inorder to calculate min and max, it will take time. So if we mention in the boundary-query. It will process quickly.
+
+[~ ram] $ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" --username retail_dba --password cloudera --target-dir /user/cloudera/departments --num-mappers 2 --outdir java_files --table departments --boundary-query "select min(department_id),max(department_id) from departments where department_id <> 8000"
+
+or 
+
+
+[~ ram] $ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" --username retail_dba --password cloudera --target-dir /user/cloudera/departments --num-mappers 2 --outdir java_files --table departments --boundary-query "select 2,7 from departments where department_id <> 8000"
+# To import specific columns
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/departments --num-mappers 2 \
+--outdir java_files --table departments \ 
+--boundary-query "select min(department_id),max(department_id) from departments where department_id <> 8000" \
+--columns department_id,department_name
+
+# While running SQoop commands, boundary query will calculate min & max using primary key of concerned table.  
+
+If there is no primary key in the table, then the sqoop command will throw error. In such case, we use --split-by.
+So if we use --split-by columnname with -m 4, the column name is mapped to 4 node.
+
+# To create table with no primay key --> create table departments_nopk as select * from departments;
+
+
+[~ ram] $ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" --username retail_dba --password cloudera --target-dir /user/cloudera/departments  --outdir java_files --table departments_nopk
+Warning: /usr/lib/sqoop/../accumulo does not exist! Accumulo imports will fail.
+Please set $ACCUMULO_HOME to the root of your Accumulo installation.
+16/07/20 07:47:58 INFO sqoop.Sqoop: Running Sqoop version: 1.4.5-cdh5.4.2
+16/07/20 07:47:58 WARN tool.BaseSqoopTool: Setting your password on the command-line is insecure. Consider using -P instead.
+16/07/20 07:47:58 INFO manager.MySQLManager: Preparing to use a MySQL streaming resultset.
+16/07/20 07:47:58 INFO tool.CodeGenTool: Beginning code generation
+16/07/20 07:47:59 INFO manager.SqlManager: Executing SQL statement: SELECT t.* FROM `departments_nopk` AS t LIMIT 1
+16/07/20 07:47:59 INFO manager.SqlManager: Executing SQL statement: SELECT t.* FROM `departments_nopk` AS t LIMIT 1
+16/07/20 07:47:59 INFO orm.CompilationManager: HADOOP_MAPRED_HOME is /usr/lib/hadoop-mapreduce
+Note: /tmp/sqoop-cloudera/compile/55e5035beb6d2058c9f7b12d3457d052/departments_nopk.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+16/07/20 07:48:02 INFO orm.CompilationManager: Writing jar file: /tmp/sqoop-cloudera/compile/55e5035beb6d2058c9f7b12d3457d052/departments_nopk.jar
+16/07/20 07:48:02 WARN manager.MySQLManager: It looks like you are importing from mysql.
+16/07/20 07:48:02 WARN manager.MySQLManager: This transfer can be faster! Use the --direct
+16/07/20 07:48:02 WARN manager.MySQLManager: option to exercise a MySQL-specific fast path.
+16/07/20 07:48:02 INFO manager.MySQLManager: Setting zero DATETIME behavior to convertToNull (mysql)
+16/07/20 07:48:02 ERROR tool.ImportTool: Error during import: No primary key could be found for table departments_nopk. Please specify one with --split-by or perform a sequential import with '-m 1'.
+
+# Note: Mapper 1 is useful for small amount of records.But for millions records, the import will fail. In such case, we use split-by
+
+# Using --split-by
+[~ ram] $ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" --username retail_dba --password cloudera --target-dir /user/cloudera/departments  --outdir java_files --table departments_nopk -m 4 --split-by department_id
+
+# -query 
+while using --query, it should contain "where \$CONDITIONS", otherwise the query will fail.
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/order_join \
+--query "select * from orders join order_items on orders.order_id=order_items.order_item_order_id where \$CONDITIONS" \
+--split-by order_id \
+-m 4
+
+
+
+5. Hadoop Certification - 04 Sqoop Import_HD
+
+
+# TO create a table in hive
+
+create table departments(department_id int, department_name string);
+
+# In hive also, we can use following command to list hdfs directory 
+
+dfs -ls /user/hive/warehouse/sqoop_import.db/departments;
+
+# When we import data from mysql to hive, it store temporary data(We call it as stage) in "/user/cloudera/tablename". So make sure that it is not already exist. Otherwise, the command will fail.
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba --password cloudera \
+--hive-home /user/hive/warehouse/sqoop_import.db \
+--hive-table sqoop_import.departments \
+--hive-overwrite \
+--hive-import \
+--table departments --num-mappers 2 \
+--outdir java_files
+
+
+# To create hive table while using sqoop import
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba --password cloudera \
+--hive-home /user/hive/warehouse/sqoop_import.db \
+--hive-table sqoop_import.departments_test\
+--hive-overwrite \
+--create-hive-table \
+--hive-import \
+--table departments --num-mappers 2 \
+--outdir java_files 
+
+
+# If --hive-overwrite is not present, then the sqoop command would append the table
+
+
+5. Hadoop Certification - 05 Sqoop Import Incremental_HD
+
+# To append the newly added data into the table using the --append parameter. It will create as much duplicates as it run
+
+Note : for --where, the parameter should be placed within ""
+
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments --num-mappers 2 \
+--outdir java_files --table departments \
+--where "department_id > 7"\
+--append
+
+
+# To create a table from existing table
+
+mysql> create table departments_inc as select * from departments;
+
+# To truncate -- To remove all records
+
+mysql> truncate departments_inc;
+
+# To add column
+
+mysql> alter table departments_inc add timestamp datetime;
+
+# To modify column
+
+mysql> alter table departments_inc modify timestamp datetime;
+
+
+# To insert into other table using existing table
+
+ mysql> insert into departments_inc(department_id,department_name) select * from departments where 1=1;
+
+# To update table
+
+
+mysql> update departments_inc set timestamp='2016-01-01 00:00:11' where department_id between 2 and 3;
+
+# Incremental example:
+
+Note: Here the timestamp should be the type as date or datetime not character....It is much important
+
+mysql> update departments_inc set timestamp='2016-01-01 00:00:11' where department_id between 2 and 3;
+Query OK, 2 rows affected (0.00 sec)
+Rows matched: 2  Changed: 2  Warnings: 0
+
+mysql> select * from departments_inc;
++---------------+-----------------+---------------------+
+| department_id | department_name | timestamp           |
++---------------+-----------------+---------------------+
+|             2 | Fitness         | 2016-01-01 00:00:11 |
+|             3 | Footwear        | 2016-01-01 00:00:11 |
+|             4 | Apparel         | 0000-00-00 00:00:00 |
+|             5 | Golf            | 0000-00-00 00:00:00 |
+|             6 | Outdoors        | 0000-00-00 00:00:00 |
+|             7 | Fan Shop        | 0000-00-00 00:00:00 |
+|          8000 | Test            | 0000-00-00 00:00:00 |
++---------------+-----------------+---------------------+
+7 rows in set (0.00 sec)
+
+
+
+
+1.Intial import
+
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments_inc --num-mappers 2 \
+--outdir java_files --table departments_inc \
+--where "department_id <4" \
+--split-by department_id
+
+
+Output:
+[~ ram]$ hdfs dfs -cat  /user/cloudera/sqoop_import/departments_inc/part*                                                                                            
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+
+
+2. Incremental append
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments_inc --num-mappers 2 \
+--outdir java_files --table departments_inc \
+--check-column "timestamp" \
+--incremental append \
+--last-value '2016-01-01 00:00:11.0'
+
+output:
+
+
+16/07/21 08:10:49 INFO tool.ImportTool: Maximal id query for free form incremental import: SELECT MAX(`timestamp`) FROM `departments_inc`
+16/07/21 08:10:49 INFO tool.ImportTool: Incremental import based on column `timestamp`
+16/07/21 08:10:49 INFO tool.ImportTool: No new rows detected since last import.
+
+# Since we have used last-value as 2016-01-01 00:00:11.0, it will look for rows which has greater timestamp than this. 
+As it has no so rows, there won't be any incremental import.
+
+
+3. Remove --last-value
+
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments_inc --num-mappers 2 \
+--outdir java_files --table departments_inc \
+--check-column "timestamp" \
+--incremental append \
+
+Output :
+
+16/07/21 08:11:56 ERROR tool.ImportTool: Error during import: No primary key could be found for table departments_inc.
+
+
+4. Use split-by
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments_inc --num-mappers 2 \
+--outdir java_files --table departments_inc \
+--check-column "timestamp" \
+--incremental append \
+--split-by department_id
+
+output:
+
+ hdfs dfs -cat /user/cloudera/sqoop_import/departments_inc/part*
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+4,Apparel,null
+5,Golf,null
+6,Outdoors,null
+7,Fan Shop,null
+8000,Test,null
+
+5. Modify the table now
+
+ select * from departments_inc;
++---------------+-----------------+---------------------+
+| department_id | department_name | timestamp           |
++---------------+-----------------+---------------------+
+|             2 | Fitness         | 2016-01-02 00:00:11 |
+|             3 | Footwear        | 2016-01-02 00:00:11 |
+|             4 | Apparel         | 2016-01-02 00:00:11 |
+|             5 | Golf            | 2016-01-02 00:00:11 |
+|             6 | Outdoors        | 2016-01-02 00:00:11 |
+|             7 | Fan Shop        | 2016-01-02 00:00:11 |
+|          8000 | Test            | 2016-01-02 00:00:11 |
++---------------+-----------------+---------------------+
+
+6. Again use append query
+
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments_inc --num-mappers 2 \
+--outdir java_files --table departments_inc \
+--check-column "timestamp" \
+--incremental append \
+--split-by department_id
+
+output:
+
+
+[~ ram]$ hdfs dfs -cat /user/cloudera/sqoop_import/departments_inc/part*
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+4,Apparel,null
+5,Golf,null
+6,Outdoors,null
+7,Fan Shop,null
+8000,Test,null
+2,Fitness,2016-01-02 00:00:11.0
+3,Footwear,2016-01-02 00:00:11.0
+4,Apparel,2016-01-02 00:00:11.0
+5,Golf,2016-01-02 00:00:11.0
+6,Outdoors,2016-01-02 00:00:11.0
+7,Fan Shop,2016-01-02 00:00:11.0
+8000,Test,2016-01-02 00:00:11.0
+
+7. Now remove the recently added in hdfs
+
+After removed,
+
+[~ ram]$ hdfs dfs -cat /user/cloudera/sqoop_import/departments_inc/part*                                                                                             
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+4,Apparel,null
+5,Golf,null
+6,Outdoors,null
+7,Fan Shop,null
+8000,Test,null
+
+
+8. Again run append query with --last
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments_inc --num-mappers 2 \
+--outdir java_files --table departments_inc \
+--check-column "timestamp" \
+--incremental append \
+--split-by department_id \
+--last-value '2016-01-01 00:00:11'
+
+Output:
+
+16/07/21 08:30:37 INFO tool.ImportTool: Maximal id query for free form incremental import: SELECT MAX(`timestamp`) FROM `departments_inc`
+16/07/21 08:30:37 INFO tool.ImportTool: Incremental import based on column `timestamp`
+16/07/21 08:30:37 INFO tool.ImportTool: Lower bound value: '2016-01-01 00:00:11'
+16/07/21 08:30:37 INFO tool.ImportTool: Upper bound value: '2016-01-02 00:00:11.0'
+
+
+
+# HDFS
+
+[~ ram]$ hdfs dfs -cat /user/cloudera/sqoop_import/departments_inc/part*
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+4,Apparel,null
+5,Golf,null
+6,Outdoors,null
+7,Fan Shop,null
+8000,Test,null
+2,Fitness,2016-01-02 00:00:11.0
+3,Footwear,2016-01-02 00:00:11.0
+4,Apparel,2016-01-02 00:00:11.0
+5,Golf,2016-01-02 00:00:11.0
+6,Outdoors,2016-01-02 00:00:11.0
+7,Fan Shop,2016-01-02 00:00:11.0
+8000,Test,2016-01-02 00:00:11.0
+
+9. Again remove recent add
+
+after removed
+
+[~ ram]$ hdfs dfs -cat /user/cloudera/sqoop_import/departments_inc/part*
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+2,Fitness,2016-01-01 00:00:11.0
+3,Footwear,2016-01-01 00:00:11.0
+4,Apparel,null
+5,Golf,null
+6,Outdoors,null
+7,Fan Shop,null
+8000,Test,null
+
+10.then run incremental query with lastmodified
+
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments_inc --num-mappers 2 \
+--outdir java_files --table departments_inc \
+--check-column "timestamp" \
+--incremental lastmodified \
+--split-by department_id \
+--last-value '2016-01-01 00:00:11'
+
+
+ouput:
+
+ Error during import: --merge-key or --append is required when using --incremental lastmodified and the output directory exists.
+
+11. So run incremental query with lastmodified and --merge-key 
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera/retail_db" \
+--username retail_dba --password cloudera \
+--target-dir /user/cloudera/sqoop_import/departments_inc --num-mappers 2 \
+--outdir java_files --table departments_inc \
+--check-column "timestamp" \
+--incremental lastmodified \
+--split-by department_id \
+--last-value '2016-01-01 00:00:11' \
+--merge-key department_id
+
+
+output: 
+
+[~ ram]$ hdfs dfs -cat /user/cloudera/sqoop_import/departments_inc/part*                                                                                             
+2,Fitness,2016-01-02 00:00:11.0
+3,Footwear,2016-01-02 00:00:11.0
+4,Apparel,2016-01-02 00:00:11.0
+5,Golf,2016-01-02 00:00:11.0
+6,Outdoors,2016-01-02 00:00:11.0
+7,Fan Shop,2016-01-02 00:00:11.0
+8000,Test,2016-01-02 00:00:11.0
+
+
+
+
