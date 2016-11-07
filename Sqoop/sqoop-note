@@ -1,0 +1,6 @@
+http://stackoverflow.com/questions/28076200/hive-drop-import-delims-not-removing-newline-while-using-hcatalog-in-sqoop
+	
+Both --hive-delims-replacement "null" and --hive-drop-import-delims did not work untill --map-column-java col4=String was added. That mean whichever column you want delims switch to work, it has to be java String type.
+
+
+Use --map-column-java option to explicitly state the column is of type String. Then --hive-drop-import-delims works as expected (to remove \n from data).
