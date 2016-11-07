@@ -1,0 +1,57 @@
+Avro --> JSON(Java Script Object Notation) format schema + data
+Sequence --> Data in binary format
+Parquet--> Datawarehouse specific file, Columnlar storage
+
+# Text file as defaults
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table departments \
+--warehouse-dir /user/cloudera/sqoop_import/departments_txtfile \
+--outdir java_files \
+--direct \
+--num-mappers 4 \
+--as-textfile
+
+
+Note: If we use warehouse-dir, it will store data under the table name within the give path...
+
+For the above case, here the data is stored under departments directory in the pth '/user/cloudera/sqoop_import/departments_txtfile '
+
+ hadoop fs -ls /user/cloudera/sqoop_import/departments_txtfile
+Found 1 items
+drwxr-xr-x   - cloudera cloudera          0 2016-07-23 01:37 /user/cloudera/sqoop_import/departments_txtfile/departments
+
+
+# Sequence File
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table departments \
+--warehouse-dir /user/cloudera/sqoop_import/departments_seqfile \
+--outdir java_files \
+--direct \
+--num-mappers 4 \
+--as-sequencefile
+
+Here the output will be in binary format
+
+# Note, for import-all-tables, we have to use warehouse-dir and import we use target-dir
+
+# Avrodata file
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table departments \
+--warehouse-dir /user/cloudera/sqoop_import/departments_avrfile \
+--outdir java_files \
+--direct \
+--num-mappers 4 \
+--as-avrodatafile
+
+# Delimiters will not have much impact on avrodata file. Since it is in JSON format
+
+# NOTE: We can create hive table from this avrodata file(Metadata)
