@@ -1,0 +1,193 @@
+# Sqoop Job
+
+sqoop job --create sqoop_job -- import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba --password cloudera --target-dir /user/cloudera/departments/sqoop_job \
+--table departments --num-mappers 2 \
+--outdir java_files \
+--fields-terminated-by '|' \
+--lines-terminated-by '\n' \
+
+
+# Note, we have to use -- import not --import. If we use --import, it will fail.
+
+
+# To list all sqoop job,
+
+sqoop job --list
+
+# To display the details
+
+sqoop job --show jobname
+
+# To run sqoop job
+
+sqoop job --exec jobname
+
+
+# Sqoop Merge
+
+sqoop import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba --password cloudera --target-dir /user/cloudera/sqoop_merge/departments \
+--table departments --num-mappers 2 \
+--outdir java_files \
+--fields-terminated-by '|' \
+--lines-terminated-by '\n' 
+
+# Sqoop Eval Update
+
+sqoop eval \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba --password cloudera \
+--query "update departments set department_name = 'TestingNew' where department_id =8000"
+
+
+# Sqoop Eval Insert
+
+
+sqoop eval \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba --password cloudera \
+--query "Insert into departments values(9000,'TestingMerge')"
+
+here both insert and update are happened in MYSQL table.
+
+# It has two files
+
+hadoop fs -ls /user/cloudera/sqoop_merge/departments/
+Found 3 items
+-rw-r--r--   1 cloudera cloudera          0 2016-07-25 05:27 /user/cloudera/sqoop_merge/departments/_SUCCESS
+-rw-r--r--   1 cloudera cloudera         60 2016-07-25 05:27 /user/cloudera/sqoop_merge/departments/part-m-00000
+-rw-r--r--   1 cloudera cloudera         10 2016-07-25 05:27 /user/cloudera/sqoop_merge/departments/part-m-00001
+
+
+# Now again run Sqoop import
+
+sqoop import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba --password cloudera --target-dir /user/cloudera/sqoop_merge/departments \
+--table departments --num-mappers 2 \
+--outdir java_files \
+--fields-terminated-by '|' \
+--lines-terminated-by '\n' \
+--where "department_id >= 8000"
+
+# If we try to run the above query, it will throw the error as follows
+
+
+
+ Output directory hdfs://quickstart.cloudera:8020/user/cloudera/sqoop_merge/departments already exists
+16/07/25 05:42:28 ERROR tool.ImportTool: Encountered IOException running import job: org.apache.hadoop.mapred.FileAlreadyExistsException: Output directory hdfs://quickstart.cloudera:8020/user/cloudera/sqoop_merge/departments already exists
+
+
+
+# So use --append option
+
+sqoop import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba --password cloudera --target-dir /user/cloudera/sqoop_merge/departments \
+--table departments --num-mappers 2 \
+--outdir java_files \
+--fields-terminated-by '|' \
+--lines-terminated-by '\n' \
+--where "department_id >= 8000" \
+--append
+
+# Again, if we use the following command, we could see the additional 2 files. By this we infer that HDFS files can not modify.
+
+hadoop fs -ls /user/cloudera/sqoop_merge/departments/
+
+[cloudera@quickstart ~]$ hadoop fs -ls /user/cloudera/sqoop_merge/departments/                                                                                       Found 5 items
+-rw-r--r--   1 cloudera cloudera          0 2016-07-25 05:27 /user/cloudera/sqoop_merge/departments/_SUCCESS
+-rw-r--r--   1 cloudera cloudera         60 2016-07-25 05:27 /user/cloudera/sqoop_merge/departments/part-m-00000
+-rw-r--r--   1 cloudera cloudera         10 2016-07-25 05:27 /user/cloudera/sqoop_merge/departments/part-m-00001
+-rw-r--r--   1 cloudera cloudera         16 2016-07-25 05:46 /user/cloudera/sqoop_merge/departments/part-m-00002
+-rw-r--r--   1 cloudera cloudera         18 2016-07-25 05:46 /user/cloudera/sqoop_merge/departments/part-m-00003
+
+
+# I have deleted those two files, then run the below command
+
+sqoop import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba --password cloudera --target-dir /user/cloudera/sqoop_merge/departments_delta \
+--table departments --num-mappers 2 \
+--outdir java_files \
+--fields-terminated-by '|' \
+--lines-terminated-by '\n' \
+--where "department_id >= 8000"
+
+
+# Now run the following commands
+
+[cloudera@quickstart ~]$ hadoop fs -cat /user/cloudera/sqoop_merge/departments_delta/part-m-*                                                                        
+8000|TestingNew
+9000|TestingMerge
+[cloudera@quickstart ~]$ hadoop fs -cat /user/cloudera/sqoop_merge/departments*/part-m-*
+
+2|Fitness
+3|Footwear
+4|Apparel
+5|Golf
+6|Outdoors
+7|Fan Shop
+8000|Test
+8000|TestingNew
+9000|TestingMerge
+
+
+# Now run the sqoop merge to merge both departments and departments_delta
+
+sqoop merge --merge-key department_id \
+--new-data /user/cloudera/sqoop_merge/departments_delta \
+--onto /user/cloudera/sqoop_merge/departments \
+--target-dir /user/cloudera/sqoop_merge/departments_stage \
+--class-name departments \
+--jar-file /tmp/sqoop-cloudera/compile/0143b017e81c677f7344720aca72d6d1/departments.jar
+
+Note: Merge will not use database connection
+
+Note to view the class departments,
+
+cd java_files
+
+view department.java
+
+
+For Jar-file, from the previous import command we can get it.
+
+
+# The merge output is as follows
+
+[cloudera@quickstart ~]$ hdfs dfs -cat /user/cloudera/sqoop_merge/departments_stage/part*
+2|Fitness
+3|Footwear
+4|Apparel
+5|Golf
+6|Outdoors
+7|Fan Shop
+8000|TestingNew
+9000|TestingMerge
+
+
+# Delete the old departments directory, and mv departments_stage over there
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
