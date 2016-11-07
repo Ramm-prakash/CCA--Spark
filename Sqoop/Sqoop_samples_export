@@ -1,0 +1,17 @@
+# Export data from HDFS to hive or MYSQL are same format
+
+1. Hadoop Certification - 01 Sqoop Export_HD
+
+# Export sample example
+
+sqoop export --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table order_items_export \
+--export-dir /user/cloudera/sqoop_import/order_items \
+--outdir java_files \
+--direct \
+--num-mappers 4
+
+# Escaped by is used to escape any special character
+
