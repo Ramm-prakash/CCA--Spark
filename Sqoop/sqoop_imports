@@ -1,0 +1,120 @@
+hadoop fs -ls /user/hive/warehouse
+
+hive> create database sqoop_import
+hive>dfs hadoop fs -ls /user/hive/warehouse
+ 
+
+### Import all tables into hive default database as the compressed file
+
+sqoop import-all-tables \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \ 
+--username retail_dba \  
+--password cloudera \ 
+--hive-import \ 
+--hive-overwrite \ 
+--create-hive-table \ 
+--compress \ 
+--compression-codec org.apache.hadoop.io.compress.SnappyCodec \ 
+--num-mappers 2 \ 
+--outdir java_files
+
+hive> dfs -du -s -h pathname ---> to count the file storage
+
+### Import all tables into hive specific database 
+
+sqoop import-all-tables \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--hive-import \
+--hive-overwrite \ 
+--create-hive-table \ 
+--hive-database retail_db \ 
+--num-mappers 2 \
+--outdir java_files
+
+
+### Import a tables into hive after the concerned table created in hive
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table departments --hive-home /user/hive/warehouse --hive-import --hive-overwrite --hive-table sqoop_import.departments --num-mappers 2 --outdir java_files
+
+## Import a table into hive without creating that concerned table in hive
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table departments --hive-home /user/hive/warehouse --hive-import --hive-overwrite --hive-table sqoop_import.departments_test --create-hive-table --num-mappers 2 --outdir java_files
+
+
+Note : without "--hive-overwrite " in the sqoop command, it will append the data into the hive table
+
+##Import a table into warehouse using sqoop as sequence file format
+
+sqoop import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table products_1 \
+--as-textfile \
+--target-dir=/user/cloudera/sqoop_import/products_1
+
+##Import a table into warehouse using sqoop as avro file format
+sqoop import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \ 
+--username retail_dba \  
+--password cloudera \ 
+--table departments \
+--as-avrodatafile \ 
+--target-dir=/user/cloudera/departments
+
+$ ls -ltr
+ where you find sqoop_import_departments.avsc
+
+sqoop_import_departments.avsc is the meta data of the table departments
+
+By using this metadata we can create a table in the hive.We need to copy this
+metadata to some location at place.
+
+hadoop fs -put /home/cloudera/sqoop_import_departments.avsc /user/cloudera
+
+
+hive> 
+
+CREATE EXTERNAL TABLE departments
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
+STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
+OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
+LOCATION 'hdfs:///user/cloudera/departments'
+TBLPROPERTIES ('avro.schema.url'='hdfs://quickstart.cloudera/user/cloudera/sqoop_import_departments.avsc');
+
+
+
+# Import using boundary query
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" 
+--username retail_dba --password cloudera --table departments 
+--target-dir /user/cloudera/departments -m 2 --boundary-query "select min(department_id), max(department_id)
+from departments where department_id <> 8000"
+
+
+# Import a table into HDFS
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table departments --target-dir /user/cloudera/sqoop_import/departments -m 2
+
+
+# Incremental Load
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table departments_incremental --target-dir /user/cloudera/sqoop_import/departments --where "department_id>4" --outdir java_files
+
+# Incremental Load- When a new row is inserted into table
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table departments_incremental --target-dir /user/cloudera/sqoop_import/departments --check-column "department_id" --incremental append --last-value 7 --outdir java_files
+
+# Incremental Load - When the timestamp changes for the record
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table departments_incremental --target-dir /user/cloudera/sqoop_import/departments --check-column "last_updated_time" --incremental append --last-value '2010-10-01' --outdir java_files
+ 
+
+# Incremental Load using MERGE -- it will merge the records instead of appending--> No duplicate records will create
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table departments_incremental --target-dir /user/cloudera/sqoop_import/departments --check-column "last_updated_time" --incremental lastmodified --last-value '2016-03-27 23:59:35.0' --outdir java_files -m 1 --merge-key department_id;
+
+# To Import table
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table departments --target-dir /user/cloudera/sqoop2 -m 2
