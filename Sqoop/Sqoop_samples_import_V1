@@ -48,6 +48,16 @@ sqoop import \
 --fields-terminated-by \, \
 --lines-terminated-by \n \
 
+# to import a table without target-dir/wareshouse-dir
+
+sqoop import \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--table departments \
+--username retail_dba \
+--password cloudera \
+--table departments
+
+# note: in the above query, default, the table departments will get stored under /user/cloudera
 
 
 # By default, the number of mappers are 4
