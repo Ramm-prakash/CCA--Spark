@@ -573,5 +573,9 @@ output:
 8000,Test,2016-01-02 00:00:11.0
 
 
+# Note:Error during import: --merge-key or --append is required when using --incremental lastmodified and the output directory exists.
+
+If we use append, it will simply append the rows which are modified since the last incremental import . Here duplicate records will get created
+But if we use merge-key, it will merge all the rows with already existing file. No dupicate records will get created.merge-key normally will have primary-key as argument
 
 
