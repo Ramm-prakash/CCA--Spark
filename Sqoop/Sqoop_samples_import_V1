@@ -122,7 +122,9 @@ sqoop import \
 --create-hive-table \
 --delete-target-dir \
 --outdir java_files
-
+# note: Default location for hive : /user/hive/warehouse
+Default table creation is MANAGED_TABLE. So if you drop the table(ex. departments), this directory "/user/hive/warehouse/departments" will get deleted
+But if you delete this directory "/user/hive/warehouse/departments", table will not get dropped. We need to do it manually.
 # To describe the table
 
 describe formatted categories;
