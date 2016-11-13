@@ -47,8 +47,8 @@ Now drop the above table in hive.
 # Then create a new table departments_test in hive itself
 
 hive > create departments_test (department_id int, department_name string)
-
-# Now again run scoop import but hive as target-dir
+# now the directory /user/hive/warehouse/departments_test would have created. But it will not contains any files
+# Now again run scoop import but hive as target-dir 
 
 sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
 --username retail_dba \
@@ -60,9 +60,9 @@ sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
 --num-mappers 4
 --append
 
-Since hive command is not used above, all the datas
-are showing null as follows
-
+Though we have import data into /user/hive/warehouse/departments_test directory, Since hive command is not used above, all the datas
+are showing null as follows when executes the  query from hive table.
+# if we use hive-import and remove --append, then data will show while quering table in hive
 
 hive> select * from departments_test;
 OK
@@ -73,6 +73,11 @@ NULL    NULL
 NULL    NULL
 NULL    NULL
 NULL    NULL
+
+# FOr warehouse-dir /user/hive/warehouse/ also, we will get the same results. Keep in mind that,  warehouse-dir parameter will create a folder
+with table name inside the path mentioned. 
+
+ex: if the path is /user/hive/warehouse/departments_test, it will place all files under the path /user/hive/warehouse/departments_test/departments
 
 # While using sqoop import with hive, hive will default set fields and lines delimiter.
 If normal sqoop import with hive target-dir, then the data will show as NULL
