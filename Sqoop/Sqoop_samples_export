@@ -13,5 +13,7 @@ sqoop export --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
 --direct \
 --num-mappers 4
 
+
+# while export, it is important to note that include input-fields-terminated-by and input-lines-terminated-by, otherwise export will fail
 # Escaped by is used to escape any special character
 
