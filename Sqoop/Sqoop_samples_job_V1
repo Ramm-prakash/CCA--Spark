@@ -117,7 +117,8 @@ sqoop import \
 --lines-terminated-by '\n' \
 --where "department_id >= 8000"
 
-
+# Note: While use the where parameter, dont forget to enclose the condition inside "", otherwise it will not consider during the query execution
+It will not throw error also
 # Now run the following commands
 
 [cloudera@quickstart ~]$ hadoop fs -cat /user/cloudera/sqoop_merge/departments_delta/part-m-*                                                                        
